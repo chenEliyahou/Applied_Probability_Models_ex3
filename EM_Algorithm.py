@@ -1,25 +1,28 @@
+from collections import defaultdict
 from datetime import datetime
 import numpy as np
 
 
 
 class EM_Algorithm:
-    def __init__(self, total_words_size, words_freq, categories_list, documents_list, init_wti):
+    def __init__(self, total_words_size, documents_words_freq, categories_list, documents_list, init_wti):
         self.__total_words_size = total_words_size
-        self.__words_freq = words_freq
+        self.__documents_words_freq = documents_words_freq
         self.__categories_list = categories_list
         self.__documents_list = documents_list
         self.__alpha = []
-        self.__p_words_for_categories = []
         self.__total_documents = len(documents_list)
         self.__total_categories = len(categories_list)
         self.__W = init_wti
+        self.__p = []
 
     def EM_algorithm(self):
         # init
-        self.__alpha = self.compute_probs_for_all_categories()
         start = datetime.now()
-        self.__p_words_for_categories = self.compute_all_words_for_categories()
+        self.__alpha = self.compute_probs_for_all_categories()
+        print('alpha running time: {0}'.format(datetime.now() - start))
+        start = datetime.now()
+        self.__p = self.compute_p_level()
         print('P running time: {0}'.format(datetime.now() - start))
 
         # likelihood =  self.compute_likelihood(alpha, p)
@@ -39,7 +42,7 @@ class EM_Algorithm:
             print('alpha running time: {0}'.format(datetime.now() - start))
 
             start = datetime.now()
-            p = self.compute_all_words_for_categories()
+            self.__p = self.compute_p_level()
             print('P running time: {0}'.format(datetime.now() - start))
 
 
@@ -55,7 +58,7 @@ class EM_Algorithm:
     def e_level(self):
         for doc in range(self.__total_documents):
             print("t= " + str(doc))
-            z_categories = []
+            z_categories = list()
             for category in range(self.__total_categories):
                 start = datetime.now()
                 z_categories = self.get_z_categories(category, doc)
@@ -71,27 +74,35 @@ class EM_Algorithm:
     def compute_wti(self, z_i, m, z_categories, k=10):
         return 0 if (z_i - m) < -k else np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) < -k)
 
+
     def get_z_categories(self, category, document):
         z_categories = list()
-        for probs_words_for_category in self.__p_words_for_categories:
-            # z_categories.append(self.compute_z_for_category_i(category, document, probs_word_for_category))
-            z_categories.append((np.log(self.__alpha[category])) +
-                                (sum(word_freq[document] * np.log(prob_word_for_category))
-                                 for word_freq, prob_word_for_category in
-                                   zip(self.__words_freq.values(), probs_words_for_category)))
+        z_categories.append(np.log(self.__alpha[category]) + sum([word_freq * np.log(self.__p[word_freq][category]) for words, word_freq in self.__documents_words_freq[document].items()]))
         return z_categories
 
-    def compute_z_for_category_i(self, category, document, probs_words_for_category):
-        tmp = 0
-        for word_freq, prob_word_for_category in zip(self.__words_freq.values(), probs_words_for_category):
-             tmp += word_freq[document] * np.log(prob_word_for_category)
-        return np.log(self.__alpha[category]) + tmp
-        #return (np.log(self.__alpha[category])) + (sum(word_freq[document] * np.log(prob_word_for_category)) for word_freq, prob_word_for_category in zip(self.__words_freq.values(), probs_words_for_category))
+    # def get_z_categories(self, category, document):
+    #     z_categories = list()
+    #     for probs_words_for_category in self.__p:
+    #         # z_categories.append(self.compute_z_for_category_i(category, document, probs_word_for_category))
+    #         z_categories.append((np.log(self.__alpha[category])) +
+    #                             (sum(word_freq[document] * np.log(prob_word_for_category))
+    #                              for word_freq, prob_word_for_category in
+    #                                zip(self.__documents_words_freq, self.__p)))
+    #     return z_categories
+    #
+    # def compute_z_for_category_i(self, category, document, p_category):
+    #     tmp = 0
+    #     for word_freq, prob_word_for_category in zip(self.__documents_words_freq, p_category):
+    #          tmp += word_freq[document] * np.log(prob_word_for_category)
+    #     return np.log(self.__alpha[category]) + tmp
+    #     #return (np.log(self.__alpha[category])) + (sum(word_freq[document] * np.log(prob_word_for_category)) for word_freq, prob_word_for_category in zip(self.__words_freq.values(), probs_words_for_category))
 
 
 
 
     #  **************** M level *****************
+
+    # **************************** alpha level **********************************88
 
     def compute_probs_for_all_categories(self, eps = 0.000045):
         probs_all_categories = list()
@@ -122,32 +133,66 @@ class EM_Algorithm:
 
 
 
+    # **************************** P level **********************************88
+
+    def compute_p_level(self, lamda = 0.001):
+        p = defaultdict(lambda: defaultdict(float))
+
+        for doc in range(self.__total_documents):
+            for word, word_freq in self.__documents_words_freq[doc].items():
+                for category in range(len(self.__categories_list)):
+                    p[word][category] += self.__W[doc][category] * word_freq
+
+        # denominator calculate
+        denominator = np.zeros(len(self.__categories_list))
+        for doc in range(self.__total_documents):
+            for category in range(len(self.__categories_list)):
+                denominator[category] += self.__W[doc][category] * len(self.__documents_list[doc])
+
+        # calc P with smoothing
+        for word in p:
+            for category in range(len(self.__categories_list)):
+                p[word][category] = (p[word][category] + lamda) / (denominator[category] + (self.__total_words_size * lamda))
+
+        return p
+
+    # def compute_probs_word_for_category(self, category, word, lamda = 0.01):
+    #     first_calc = 0
+    #     for wti, freq in zip(self.__W, self.__documents_words_freq):
+    #         first_calc += self.__W[wti][category]*freq[word]
+    #     second_calc = 0
+    #     for wti, doc in zip(self.__W, self.__documents_list):
+    #         second_calc += self.__W[wti][category] * len(doc)
+    #
+    #     return (first_calc + lamda) / (second_calc + self.__total_words_size*lamda)
+
+        # def compute_all_words_for_categories(self):
+        #     probs_words_for_categories = list()
+        #     for category in range(len(self.__categories_list)):
+        #         probs_words_for_categories.append(self.compute_all_words_for_category(category))
+        #     return probs_words_for_categories
+        #
+        # def compute_all_words_for_category(self, category):
+        #     probs_words_for_category = list()
+        #     for freq_word in self.__documents_words_freq:
+        #         probs_words_for_category.append(
+        #             self.compute_probs_word_for_category(self.__documents_words_freq[freq_word], category))
+        #     return probs_words_for_category
 
 
-    def compute_all_words_for_categories(self):
-        probs_words_for_categories = list()
-        for category in range(len(self.__categories_list)):
-            probs_words_for_categories.append(self.compute_all_words_for_category(category))
-        return probs_words_for_categories
-
-    def compute_all_words_for_category(self, category):
-        probs_words_for_category = list()
-        for freq_word in self.__words_freq:
-            probs_words_for_category.append(self.compute_probs_word_for_category(self.__words_freq[freq_word], category))
-        return probs_words_for_category
-
-
-    # Pik = ∑t(wti*ntk) + λ
-    #       ∑t(wti*nt) + |V |λ
-    def compute_probs_word_for_category(self, freq_word, category, lamda = 0.01):
-        first_calc = 0
-        for wti, freq in zip(self.__W, freq_word):
-            first_calc += self.__W[wti][category]*freq
-        second_calc = 0
-        for wti, doc in zip(self.__W, self.__documents_list):
-            second_calc += self.__W[wti][category] * doc[1]
-
-        return (first_calc + lamda) / (second_calc + self.__total_words_size*lamda)
+            # # Pik = ∑t(wti*ntk) + λ
+    # #       ∑t(wti*nt) + |V |λ
+    # def compute_probs_word_for_category(self, freq_word, category, lamda = 0.01):
+    #     first_calc = 0
+    #     for wti, freq in zip(self.__W, freq_word):
+    #         first_calc += self.__W[wti][category]*freq
+    #     second_calc = 0
+    #     for wti, doc in zip(self.__W, self.__documents_list):
+    #         second_calc += self.__W[wti][category] * doc[1]
+    #
+    #     return (first_calc + lamda) / (second_calc + self.__total_words_size*lamda)
+    #
+    #
 
 
     # **************** Likelihood *****************

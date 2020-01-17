@@ -1,4 +1,5 @@
 import numpy as np
+from collections import Counter
 
 def create_counter_dict(words):
     counter_dict = dict()
@@ -49,14 +50,11 @@ def create_list_from_topic_file(topic_file):
     topics_list = read_lines(topic_file)
     return topics_list
 
-def words_frequency_in_documents(words_list, documents_list):
-    words_freq = dict()
-    for word in words_list:
-        words_freq_for_documents = list()
-        for i in range(len(documents_list)):
-            words_freq_for_documents.append(documents_list[i][0].count(word))
-        words_freq[word] = words_freq_for_documents
-    return words_freq
+def documents_words_frequency(documents_list):
+    documents_words_freq = list()
+    for doc in documents_list:
+        documents_words_freq.append(Counter(doc))
+    return documents_words_freq
 
 def first_init_documents(documents_list, topics_list):
     prop_docs_in_categories_wti = dict()

@@ -19,12 +19,12 @@ def main(develop_file, topics_file, test_file, output_filename):
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!
     # calculate frequency to every word in each document [word k -> frequency(n1k, ... ntk... nNk)]
-    words_freq = Utils.words_frequency_in_documents(filter_word_dictionary, documents_list)
+    documents_words_freq = Utils.documents_words_frequency(documents_list)
     print("calculate frequency to every word")
     # init wti
     wti = Utils.first_init_documents(documents_list, categories_list)
 
-    em_algorithm = EM_Algorithm(len(filter_word_dictionary), words_freq, categories_list, documents_list, wti)
+    em_algorithm = EM_Algorithm(len(filter_word_dictionary), documents_words_freq, categories_list, documents_list, wti)
 
     start = datetime.now()
     em_algorithm.EM_algorithm()
