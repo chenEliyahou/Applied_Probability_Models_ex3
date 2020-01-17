@@ -3,7 +3,6 @@ from datetime import datetime
 import numpy as np
 
 
-
 class EM_Algorithm:
     def __init__(self, total_words_size, documents_words_freq, categories_list, documents_list, init_wti):
         self.__total_words_size = total_words_size
@@ -15,45 +14,47 @@ class EM_Algorithm:
         self.__total_categories = len(categories_list)
         self.__W = init_wti
         self.__p = []
+        self.__likelihoods = []
 
-    def EM_algorithm(self, eps = 0.01):
+    def EM_algorithm(self, eps=0.01):
         # init
-        start = datetime.now()
+        # start = datetime.now()
         self.__alpha = self.compute_probs_for_all_categories()
-        print('alpha running time: {0}'.format(datetime.now() - start))
-        start = datetime.now()
+        # print('alpha running time: {0}'.format(datetime.now() - start))
+        # start = datetime.now()
         self.__p = self.compute_p_level()
-        print('P running time: {0}'.format(datetime.now() - start))
+        # print('P running time: {0}'.format(datetime.now() - start))
 
-        likelihood = self.compute_likelihood()
-        new_likelihood = 0
+        self.__likelihoods.append(self.compute_likelihood())
 
-        while(abs(likelihood - new_likelihood) > eps):
-            likelihood = new_likelihood
+        for i in [1,2]:
             # E level
-            start = datetime.now()
+            # start = datetime.now()
 
             # wti = self.get_probs_all_docs_in_all_categories()
             W = self.e_level()
-            print('E running time: {0}'.format(datetime.now() - start))
+            # print('E running time: {0}'.format(datetime.now() - start))
 
             # M level
-            start = datetime.now()
+            # start = datetime.now()
             self.__alpha = self.compute_probs_for_all_categories()
-            print('alpha running time: {0}'.format(datetime.now() - start))
+            # print('alpha running time: {0}'.format(datetime.now() - start))
 
-            start = datetime.now()
+            # start = datetime.now()
             self.__p = self.compute_p_level()
-            print('P running time: {0}'.format(datetime.now() - start))
+            # print('P running time: {0}'.format(datetime.now() - start))
 
 
             # Likelihood
-            start = datetime.now()
-            new_likelihood = self.compute_likelihood()
-            print('likelihood running time: {0}'.format(datetime.now() - start))
-            print("likelihood = " + str(new_likelihood))
+            # start = datetime.now()
+            self.__likelihoods.append(self.compute_likelihood())
+            # print('likelihood running time: {0}'.format(datetime.now() - start))
+            print("likelihood = " + str(self.__likelihoods[-1]))
+            # if abs(self.__likelihoods[-1] - self.__likelihoods[-2]) <= eps:
+            #     break
 
-    #  **************** E level *****************
+        self.plot_likelihoods(self.__likelihoods)
+    # **************** E level *****************
 
     def e_level(self):
         for doc in range(self.__total_documents):
@@ -64,8 +65,8 @@ class EM_Algorithm:
                 self.__W[doc][category] = wti
 
     def compute_wti(self, z_i, m, z_categories, k=10):
-        return 0 if (z_i - m) < -k else (np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
-
+        return 0 if (z_i - m) < -k else (
+        np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
 
     def get_z_categories(self, document):
         z_categories = list()
@@ -77,13 +78,11 @@ class EM_Algorithm:
             z_categories.append(np.log(self.__alpha[category]) + sum)
         return z_categories
 
-
-
     #  **************** M level *****************
 
     # **************************** alpha level **********************************88
 
-    def compute_probs_for_all_categories(self, eps = 0.000045):
+    def compute_probs_for_all_categories(self, eps=0.000045):
         probs_all_categories = list()
         for c_i in range(len(self.__categories_list)):
             prob_categoty = self.compute_prob_to_category(c_i)
@@ -108,13 +107,11 @@ class EM_Algorithm:
 
     def fix_alpha(self, probs_for_categories):
         sum_probs_categories = sum(map(np.array, probs_for_categories))
-        probs_for_categories[:] = [(prob_i/sum_probs_categories) for prob_i in probs_for_categories]
-
-
+        probs_for_categories[:] = [(prob_i / sum_probs_categories) for prob_i in probs_for_categories]
 
     # **************************** P level **********************************88
 
-    def compute_p_level(self, lamda = 0.001):
+    def compute_p_level(self, lamda=0.001):
         p = defaultdict(lambda: defaultdict(float))
 
         for doc in range(self.__total_documents):
@@ -131,11 +128,10 @@ class EM_Algorithm:
         # calc P with smoothing
         for word in p:
             for category in range(len(self.__categories_list)):
-                p[word][category] = (p[word][category] + lamda) / (denominator[category] + (self.__total_words_size * lamda))
+                p[word][category] = (p[word][category] + lamda) / (
+                denominator[category] + (self.__total_words_size * lamda))
 
         return p
-
-
 
     # *********************** Likelihood ***********************
 
@@ -150,9 +146,18 @@ class EM_Algorithm:
             likelihood_sum += m + np.log(w_probs_categories_for_doc)
         return likelihood_sum
 
-
     def compute_wti_likelihood(self, z_i, m, k=10):
         if (z_i - m) >= -k:
-            return np.exp(z_i -m)
+            return np.exp(z_i - m)
         else:
             return 0
+
+
+    def plot_likelihoods(self, likelihoods):
+        plt.plot(range(len(likelihoods)), likelihoods, label='linear')
+
+        # Add a legend
+        plt.legend()
+
+        # Show the plot
+        plt.show()
