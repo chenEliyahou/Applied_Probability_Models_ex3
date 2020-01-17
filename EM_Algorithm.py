@@ -16,7 +16,7 @@ class EM_Algorithm:
         self.__W = init_wti
         self.__p = []
 
-    def EM_algorithm(self):
+    def EM_algorithm(self, eps = 0.01):
         # init
         start = datetime.now()
         self.__alpha = self.compute_probs_for_all_categories()
@@ -25,10 +25,11 @@ class EM_Algorithm:
         self.__p = self.compute_p_level()
         print('P running time: {0}'.format(datetime.now() - start))
 
-        # likelihood =  self.compute_likelihood(alpha, p)
+        likelihood = self.compute_likelihood()
+        new_likelihood = 0
 
-
-        for i in range(5):
+        while(abs(likelihood - new_likelihood) > eps):
+            likelihood = new_likelihood
             # E level
             start = datetime.now()
 
@@ -47,30 +48,23 @@ class EM_Algorithm:
 
 
             # Likelihood
-
-            # start = datetime.now()
-            # new_likelihood = self.compute_likelihood(alpha, p)
-            # print('likelihood running time: {0}'.format(datetime.now() - start))
-            # print(new_likelihood)
+            start = datetime.now()
+            new_likelihood = self.compute_likelihood()
+            print('likelihood running time: {0}'.format(datetime.now() - start))
+            print("likelihood = " + str(new_likelihood))
 
     #  **************** E level *****************
 
     def e_level(self):
         for doc in range(self.__total_documents):
-            print("t= " + str(doc))
-
             z_categories = self.get_z_categories(doc)
-
             m = max(z_categories)
             for category in range(self.__total_categories):
-                start = datetime.now()
                 wti = self.compute_wti(z_categories[category], m, z_categories)
-                print('compute_wti: {0}'.format(datetime.now() - start))
-
                 self.__W[doc][category] = wti
 
     def compute_wti(self, z_i, m, z_categories, k=10):
-        return 0 if (z_i - m) < -k else np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) < -k)
+        return 0 if (z_i - m) < -k else (np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
 
 
     def get_z_categories(self, document):
@@ -82,24 +76,6 @@ class EM_Algorithm:
                 sum += word_freq * np.log(self.__p[word][category])
             z_categories.append(np.log(self.__alpha[category]) + sum)
         return z_categories
-
-    # def get_z_categories(self, category, document):
-    #     z_categories = list()
-    #     for probs_words_for_category in self.__p:
-    #         # z_categories.append(self.compute_z_for_category_i(category, document, probs_word_for_category))
-    #         z_categories.append((np.log(self.__alpha[category])) +
-    #                             (sum(word_freq[document] * np.log(prob_word_for_category))
-    #                              for word_freq, prob_word_for_category in
-    #                                zip(self.__documents_words_freq, self.__p)))
-    #     return z_categories
-    #
-    # def compute_z_for_category_i(self, category, document, p_category):
-    #     tmp = 0
-    #     for word_freq, prob_word_for_category in zip(self.__documents_words_freq, p_category):
-    #          tmp += word_freq[document] * np.log(prob_word_for_category)
-    #     return np.log(self.__alpha[category]) + tmp
-    #     #return (np.log(self.__alpha[category])) + (sum(word_freq[document] * np.log(prob_word_for_category)) for word_freq, prob_word_for_category in zip(self.__words_freq.values(), probs_words_for_category))
-
 
 
 
@@ -159,60 +135,24 @@ class EM_Algorithm:
 
         return p
 
-    # def compute_probs_word_for_category(self, category, word, lamda = 0.01):
-    #     first_calc = 0
-    #     for wti, freq in zip(self.__W, self.__documents_words_freq):
-    #         first_calc += self.__W[wti][category]*freq[word]
-    #     second_calc = 0
-    #     for wti, doc in zip(self.__W, self.__documents_list):
-    #         second_calc += self.__W[wti][category] * len(doc)
-    #
-    #     return (first_calc + lamda) / (second_calc + self.__total_words_size*lamda)
-
-        # def compute_all_words_for_categories(self):
-        #     probs_words_for_categories = list()
-        #     for category in range(len(self.__categories_list)):
-        #         probs_words_for_categories.append(self.compute_all_words_for_category(category))
-        #     return probs_words_for_categories
-        #
-        # def compute_all_words_for_category(self, category):
-        #     probs_words_for_category = list()
-        #     for freq_word in self.__documents_words_freq:
-        #         probs_words_for_category.append(
-        #             self.compute_probs_word_for_category(self.__documents_words_freq[freq_word], category))
-        #     return probs_words_for_category
 
 
-            # # Pik = ∑t(wti*ntk) + λ
-    # #       ∑t(wti*nt) + |V |λ
-    # def compute_probs_word_for_category(self, freq_word, category, lamda = 0.01):
-    #     first_calc = 0
-    #     for wti, freq in zip(self.__W, freq_word):
-    #         first_calc += self.__W[wti][category]*freq
-    #     second_calc = 0
-    #     for wti, doc in zip(self.__W, self.__documents_list):
-    #         second_calc += self.__W[wti][category] * doc[1]
-    #
-    #     return (first_calc + lamda) / (second_calc + self.__total_words_size*lamda)
-    #
-    #
+    # *********************** Likelihood ***********************
+
+    def compute_likelihood(self):
+        likelihood_sum = 0
+        for doc in range(self.__total_documents):
+            w_probs_categories_for_doc = 0
+            z_categories = self.get_z_categories(doc)
+            m = max(z_categories)
+            for category in range(self.__total_categories):
+                w_probs_categories_for_doc += self.compute_wti_likelihood(z_categories[category], m)
+            likelihood_sum += m + np.log(w_probs_categories_for_doc)
+        return likelihood_sum
 
 
-    # **************** Likelihood *****************
-
-    # def compute_likelihood(self, probs_all_categories, probs_all_words_for_categories, likelihood = True):
-    #     likelihood_sum = 0
-    #     for doc in self.__documents_list:
-    #         w_doc_categories = self.get_probs_doc_in_categories(probs_all_categories, probs_all_words_for_categories, doc, likelihood)
-    #         likelihood_sum += sum(w_doc_categories)
-    #     return
-    #
-    #
-    # def compute_wti_likelihood(self, z_i, m, z_categories, k=10):
-    #     if (z_i - m) < -k:
-    #         return 0
-    #     else:
-    #         return pow(np.e, z_i - m)
-    #
-    #
-    #
+    def compute_wti_likelihood(self, z_i, m, k=10):
+        if (z_i - m) >= -k:
+            return np.exp(z_i -m)
+        else:
+            return 0
