@@ -58,13 +58,11 @@ class EM_Algorithm:
     def e_level(self):
         for doc in range(self.__total_documents):
             print("t= " + str(doc))
-            z_categories = list()
-            for category in range(self.__total_categories):
-                start = datetime.now()
-                z_categories = self.get_z_categories(category, doc)
-                print('get_z_categories: {0}'.format(datetime.now() - start))
 
-                m = max(z_categories)
+            z_categories = self.get_z_categories(doc)
+
+            m = max(z_categories)
+            for category in range(self.__total_categories):
                 start = datetime.now()
                 wti = self.compute_wti(z_categories[category], m, z_categories)
                 print('compute_wti: {0}'.format(datetime.now() - start))
@@ -75,9 +73,14 @@ class EM_Algorithm:
         return 0 if (z_i - m) < -k else np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) < -k)
 
 
-    def get_z_categories(self, category, document):
+    def get_z_categories(self, document):
         z_categories = list()
-        z_categories.append(np.log(self.__alpha[category]) + sum([word_freq * np.log(self.__p[word_freq][category]) for words, word_freq in self.__documents_words_freq[document].items()]))
+        for category in range(self.__total_categories):
+            sum = 0
+            words_counter = self.__documents_words_freq[document]
+            for word, word_freq in words_counter.items():
+                sum += word_freq * np.log(self.__p[word][category])
+            z_categories.append(np.log(self.__alpha[category]) + sum)
         return z_categories
 
     # def get_z_categories(self, category, document):
