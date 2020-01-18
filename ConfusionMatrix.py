@@ -11,6 +11,7 @@ class ConfusionMatrix:
         self.__docs_clusters = docs_clusters
         self.__topics = topics_list
         self.__confusion_matrix = []
+        self.__not_sorted_confusion_matrix = []
         self.__topics_for_docs = topics_for_docs
         self.__dominant_topic = list()
 
@@ -26,9 +27,9 @@ class ConfusionMatrix:
             confusion_matrix[cluster_index][-1] = cluster_size
 
         # Rows are sorted by cluster size in descending order.
-        confusion_matrix = sorted(confusion_matrix, key=lambda row: row[-1], reverse=True)
+        self.__confusion_matrix = sorted(confusion_matrix, key=lambda row: row[-1], reverse=True)
 
-        self.__confusion_matrix = confusion_matrix
+        self.__not_sorted_confusion_matrix = confusion_matrix
 
     def print_confusion_matrix(self):
         columns = self.__topics + ['Size']
@@ -41,7 +42,7 @@ class ConfusionMatrix:
         plt.show()
 
     def dominant_topic_for_clusters(self):
-        for cluster in self.__confusion_matrix:
+        for cluster in self.__not_sorted_confusion_matrix:
             topic_index = np.argmax(cluster[:-2])
             self.__dominant_topic.append(self.__topics[topic_index])
 
