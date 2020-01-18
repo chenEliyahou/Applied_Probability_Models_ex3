@@ -38,3 +38,11 @@ class Confusion_Matrix:
         sn.set(font_scale=1.4)  # for label size
         sn.heatmap(df, annot=True, annot_kws={"size": 16})  # font size
         plt.show()
+
+    def dominant_topic_for_clusters(self, topics):
+        dominant_topic = list()
+        for cluster_topics in self.__confusion_matrix:
+            (m, i) = max((v, i) for i, v in enumerate(cluster_topics))
+            dominant_topic.append(topics[i])
+
+        return dominant_topic
