@@ -1,14 +1,15 @@
 # Chen Eliyahou 312490675 Noam Simon 208388850
 
-from datetime import datetime
 import sys
+from datetime import datetime
+
 import Utils
 from Clusters import Clusters
-from Confusion_Matrix import Confusion_Matrix
+from ConfusionMatrix import ConfusionMatrix
 from EM_Algorithm import EM_Algorithm
 
-def main(develop_file, topics_file, test_file, output_filename):
 
+def main(develop_file, topics_file):
     lines = Utils.read_lines(develop_file)
     # the dictionary |V|
     dev = Utils.get_words_list(lines)
@@ -41,16 +42,16 @@ def main(develop_file, topics_file, test_file, output_filename):
     docs_clusters = clusters.max_clusters_for_docs(W)
 
     # calculate confusion matrix
-    confusion_matrix = Confusion_Matrix(topics_for_docs)
-    confusion_matrix.compute_confusion_matrix(docs_clusters, topics_list)
-    confusion_matrix.print_confusion_matrix(topics_list)
+    confusion_matrix = ConfusionMatrix(docs_clusters, topics_for_docs, topics_list)
+    confusion_matrix.compute_confusion_matrix()
+    confusion_matrix.print_confusion_matrix()
+    confusion_matrix.dominant_topic_for_clusters()
+    print(confusion_matrix.accuracy())
 
-
-
-    #write_outputs(outputs, output_filename)
+    # write_outputs(outputs, output_filename)
 
 
 if __name__ == "__main__":
     start = datetime.now()
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main(sys.argv[1], sys.argv[2])
     print('Total running time: {0}'.format(datetime.now() - start))
