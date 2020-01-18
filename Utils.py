@@ -7,6 +7,7 @@ def create_counter_dict(words):
         increase_counter(counter_dict, word)
     return counter_dict
 
+# Chen Eliyahou 312490675 Noam Simon 208388850
 
 def increase_counter(words_counter_dict, word):
     words_counter_dict[word] = words_counter_dict.get(word, 0) + 1
