@@ -1,5 +1,6 @@
 from collections import defaultdict
-from datetime import datetime
+
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -27,7 +28,7 @@ class EM_Algorithm:
 
         self.__likelihoods.append(self.compute_likelihood())
 
-        for i in [1,2]:
+        while True:
             # E level
             # start = datetime.now()
 
@@ -44,16 +45,16 @@ class EM_Algorithm:
             self.__p = self.compute_p_level()
             # print('P running time: {0}'.format(datetime.now() - start))
 
-
             # Likelihood
             # start = datetime.now()
             self.__likelihoods.append(self.compute_likelihood())
             # print('likelihood running time: {0}'.format(datetime.now() - start))
             print("likelihood = " + str(self.__likelihoods[-1]))
-            # if abs(self.__likelihoods[-1] - self.__likelihoods[-2]) <= eps:
-            #     break
+            if abs(self.__likelihoods[-1] - self.__likelihoods[-2]) <= eps:
+                break
 
         self.plot_likelihoods(self.__likelihoods)
+
     # **************** E level *****************
 
     def e_level(self):
@@ -66,7 +67,7 @@ class EM_Algorithm:
 
     def compute_wti(self, z_i, m, z_categories, k=10):
         return 0 if (z_i - m) < -k else (
-        np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
+                np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
 
     def get_z_categories(self, document):
         z_categories = list()
@@ -129,7 +130,7 @@ class EM_Algorithm:
         for word in p:
             for category in range(len(self.__categories_list)):
                 p[word][category] = (p[word][category] + lamda) / (
-                denominator[category] + (self.__total_words_size * lamda))
+                        denominator[category] + (self.__total_words_size * lamda))
 
         return p
 
@@ -151,7 +152,6 @@ class EM_Algorithm:
             return np.exp(z_i - m)
         else:
             return 0
-
 
     def plot_likelihoods(self, likelihoods):
         plt.plot(range(len(likelihoods)), likelihoods, label='linear')

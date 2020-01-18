@@ -1,10 +1,11 @@
-from datetime import datetime
 import sys
+from datetime import datetime
+
 import Utils
 from EM_Algorithm import EM_Algorithm
 
-def main(develop_file, topics_file, test_file, output_filename):
 
+def main(develop_file, topics_file):
     lines = Utils.read_lines(develop_file)
     # the dictionary |V|
     dev = Utils.get_words_list(lines)
@@ -36,13 +37,13 @@ def main(develop_file, topics_file, test_file, output_filename):
 
 
 # test = utils.get_words_list()
-    # topics_test = utils.get_topics_list()
+# topics_test = utils.get_topics_list()
 
 
-    #write_outputs(outputs, output_filename)
+# write_outputs(outputs, output_filename)
 
 
 if __name__ == "__main__":
     start = datetime.now()
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main(sys.argv[1], sys.argv[2])
     print('Total running time: {0}'.format(datetime.now() - start))
