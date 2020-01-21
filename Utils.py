@@ -1,3 +1,5 @@
+# Chen Eliyahou 312490675 Noam Simon 208388850
+
 import numpy as np
 from collections import Counter
 

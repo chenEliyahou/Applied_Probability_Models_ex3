@@ -16,8 +16,8 @@ class ConfusionMatrix:
         self.__dominant_topic = list()
 
     def compute_confusion_matrix(self):
-        cluster_sizes = np.zeros(9)
-        confusion_matrix = np.zeros((9, 10))
+        cluster_sizes = np.zeros(9, dtype=np.int)
+        confusion_matrix = np.zeros((9, 10), dtype=np.int)
         for doc_index, cluster in enumerate(self.__docs_clusters):
             cluster_sizes[cluster] += 1
             for topic in self.__topics_for_docs[doc_index]:
@@ -38,7 +38,7 @@ class ConfusionMatrix:
         print(df)
         print()
         sn.set(font_scale=1.4)  # for label size
-        sn.heatmap(df, annot=True, annot_kws={"size": 16})  # font size
+        sn.heatmap(df, annot=True, annot_kws={"size": 16}, fmt="d", linewidths=.5, cmap="YlGnBu")  # font size
         plt.show()
 
     def dominant_topic_for_clusters(self):

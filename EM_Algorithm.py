@@ -1,9 +1,9 @@
 # Chen Eliyahou 312490675 Noam Simon 208388850
 
 from collections import defaultdict
-from datetime import datetime
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class EM_Algorithm:
@@ -31,9 +31,9 @@ class EM_Algorithm:
 
         likelihood = self.compute_likelihood()
         self.__likelihoods.append(likelihood)
-        self.__perplexity.append((-1/self.__total_documents) * likelihood)
+        self.__perplexity.append((-1 / self.__total_documents) * likelihood)
 
-        while(True):
+        while (True):
             # E level
             # start = datetime.now()
 
@@ -50,7 +50,6 @@ class EM_Algorithm:
             self.__p = self.compute_p_level()
             # print('P running time: {0}'.format(datetime.now() - start))
 
-
             # Likelihood
             # start = datetime.now()
             likelihood = self.compute_likelihood()
@@ -62,10 +61,11 @@ class EM_Algorithm:
             if abs(self.__likelihoods[-1] - self.__likelihoods[-2]) <= eps:
                 break
 
-        self.plot_likelihoods(self.__likelihoods)
-        self.plot_likelihoods(self.__perplexity)
+        self.plot(self.__likelihoods)
+        self.plot(self.__perplexity)
 
         return self.__W
+
     # **************** E level *****************
 
     def e_level(self):
@@ -77,7 +77,8 @@ class EM_Algorithm:
                 self.__W[doc][category] = wti
 
     def compute_wti(self, z_i, m, z_categories, k=10):
-        return 0 if (z_i - m) < -k else (np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
+        return 0 if (z_i - m) < -k else (
+                np.exp(z_i - m) / sum(np.exp(z_j - m) for z_j in z_categories if (z_j - m) >= -k))
 
     def get_z_categories(self, document):
         z_categories = list()
@@ -96,8 +97,8 @@ class EM_Algorithm:
     def compute_probs_for_all_categories(self, eps=0.000045):
         probs_all_categories = list()
         for c_i in range(len(self.__categories_list)):
-            prob_categoty = self.compute_prob_to_category(c_i)
-            probs_all_categories.append(prob_categoty)
+            prob_category = self.compute_prob_to_category(c_i)
+            probs_all_categories.append(prob_category)
 
         fix_probs = False
         for i in range(len(probs_all_categories)):
@@ -105,7 +106,8 @@ class EM_Algorithm:
                 fix_probs = True
                 probs_all_categories[i] += eps
         if fix_probs:
-            self.fix_alpha(probs_all_categories)
+            sum_probs_categories = sum(map(np.array, probs_all_categories))
+            probs_all_categories = [(prob_i / sum_probs_categories) for prob_i in probs_all_categories]
 
         return probs_all_categories
 
@@ -114,11 +116,7 @@ class EM_Algorithm:
         sum_probs = 0
         for wti in self.__W:
             sum_probs += self.__W[wti][category]
-        return (1 / self.__total_documents) * (sum_probs)
-
-    def fix_alpha(self, probs_for_categories):
-        sum_probs_categories = sum(map(np.array, probs_for_categories))
-        probs_for_categories[:] = [(prob_i / sum_probs_categories) for prob_i in probs_for_categories]
+        return (1 / self.__total_documents) * sum_probs
 
     # **************************** P level **********************************88
 
@@ -132,15 +130,15 @@ class EM_Algorithm:
 
         # denominator calculate
         denominator = np.zeros(len(self.__categories_list))
-        for doc in range(self.__total_documents):
-            for category in range(len(self.__categories_list)):
+        for category in range(len(self.__categories_list)):
+            for doc in range(self.__total_documents):
                 denominator[category] += self.__W[doc][category] * len(self.__documents_list[doc])
 
         # calc P with smoothing
-        for word in p:
-            for category in range(len(self.__categories_list)):
+        for category in range(len(self.__categories_list)):
+            for word in p.keys():
                 p[word][category] = (p[word][category] + lamda) / (
-                denominator[category] + (self.__total_words_size * lamda))
+                        denominator[category] + (self.__total_words_size * lamda))
 
         return p
 
@@ -163,9 +161,8 @@ class EM_Algorithm:
         else:
             return 0
 
-
-    def plot_likelihoods(self, likelihoods):
-        plt.plot(range(len(likelihoods)), likelihoods, label='linear')
+    def plot(self, args):
+        plt.plot(range(len(args)), args, label='linear')
         # Add a legend
         plt.legend()
         # Show the plot

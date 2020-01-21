@@ -8,6 +8,7 @@ import numpy as np
 class EM:
     def __init__(self, documents, categories):
         self.k = 10
+        self.vocabulary_size = 0
         self.documents = documents
         self.categories = categories
         self.word_frequency = defaultdict(Counter)
@@ -20,11 +21,16 @@ class EM:
                 self.word_frequency[word][index] += 1
 
     def filter_rare_word(self, threshold=3):
-        self.word_frequency = {x: counter for x, counter in self.word_frequency.items() if
-                               sum(counter.values()) >= threshold}
+        word_frequency = defaultdict(lambda: defaultdict(int))
+        for word, frequencies in self.word_frequency.items():
+            if sum(frequencies.values()) > threshold:
+                self.vocabulary_size += 1
+                for doc, frequency in frequencies.items():
+                    word_frequency[doc][word] = frequency
+        self.word_frequency = word_frequency
 
     def start(self):
-        eps = 0.1
+        threshold = 0.01
         alpha, p = self.initialize()
         likelihoods = list()
         while True:
@@ -41,9 +47,17 @@ class EM:
             p = self.cal_p(w)
             print('p running time: {0}'.format(datetime.now() - start))
             print('likelihoods: ', likelihoods[-1])
-            if len(likelihoods) > 1 and abs(likelihoods[-1] - likelihoods[-2]) <= eps:
+            if len(likelihoods) > 1 and abs(likelihoods[-1] - likelihoods[-2]) <= threshold:
                 break
         EM.plot_likelihoods(likelihoods)
+        return self.cal_clusters(w)
+
+    def cal_clusters(self, w):
+        clusters = defaultdict(list)
+        for t in range(len(self.documents)):
+            cluster_index = np.argmax(w[t])
+            clusters[cluster_index].append(t)
+        return clusters
 
     def initialize(self):
         w = self.initialize_w()
@@ -52,36 +66,43 @@ class EM:
         return alpha, p
 
     def initialize_w(self):
-        w = np.zeros((len(self.documents), len(self.categories)))
-        for t in range(len(self.documents)):
+        w = np.zeros((len(self.word_frequency), len(self.categories)))
+        for t in self.word_frequency.keys():
             mod = t % len(self.categories)
             w[t][mod] = 1
         return w
 
     def cal_alpha(self, w):
-        alpha = np.zeros(len(self.categories))  # could be hard coded values according to % mod
+        alpha = list()  # could be hard coded values according to % mod
         for i in range(len(self.categories)):
-            for t in range(len(self.documents)):
+            alpha.append(0)
+            for t in self.word_frequency.keys():
                 alpha[i] += w[t][i]
-            alpha[i] /= len(self.documents)
+            alpha[i] /= len(self.word_frequency)
         return EM.smoothing_alpha(alpha)
 
     def cal_p(self, w, lamda=0.0001):
-        vocabulary_size = len(self.word_frequency.keys())
-        p = np.zeros((len(self.categories), len(self.word_frequency.keys())))
+        p = defaultdict(lambda: defaultdict(float))
+
+        down_sum = list()
         for i in range(len(self.categories)):
-            for k, word in enumerate(self.word_frequency.keys()):
-                up_sum, down_sum = 0, 0
-                for t in range(len(self.documents)):
-                    up_sum += w[t][i] * self.word_frequency[word][t]
-                    down_sum += w[t][i] * len(self.documents[t])
-                p[i][k] = (up_sum + lamda) / (down_sum + lamda * vocabulary_size)
+            down_sum.append(sum([w[t][i] * len(self.documents[t]) for t in self.word_frequency.keys()]))
+
+        for i in range(len(self.categories)):
+            for t in self.word_frequency.keys():
+                for word, frequency in self.word_frequency[t].items():
+                    p[i][word] += w[t][i] * frequency
+
+        for i in range(len(self.categories)):
+            for word, current_value in p[i].items():
+                p[i][word] = (current_value + lamda) / (down_sum[i] + lamda * self.vocabulary_size)
+
         return p
 
     def cal_w(self, alpha, p):
         ln_likelihood = 0
-        w = np.zeros((len(self.documents), len(self.categories)))
-        for t in range(len(self.documents)):
+        w = defaultdict(lambda: defaultdict(float))
+        for t in self.word_frequency.keys():
             z = [self.cal_z(alpha, p, j, t) for j in range(len(self.categories))]
             m = max(z)
             indexes = list()
@@ -98,9 +119,8 @@ class EM:
         return w, ln_likelihood
 
     def cal_z(self, alpha, p, i, t):
-        return np.math.log(alpha[i], np.math.e) + \
-               sum([self.word_frequency[word][t] * np.math.log(p[i][k], np.math.e) for k, word in
-                    enumerate(self.word_frequency.keys())])
+        return np.math.log(alpha[i], np.math.e) + sum(
+            [frequency * np.math.log(p[i][word], np.math.e) for word, frequency in self.word_frequency[t].items()])
 
     # def cal_ln_likelihood(self, alpha, p):
     #     ln_likelihood = 0
@@ -113,11 +133,16 @@ class EM:
 
     @staticmethod
     def smoothing_alpha(alpha, eps=0.001):
+        smoothing = False
         for i in range(len(alpha)):
             if alpha[i] < eps:
+                smoothing = True
                 alpha[i] = eps
+        if not smoothing:
+            return alpha
         normal = sum(alpha)
-        return [a / normal for a in alpha]
+        a = [a / normal for a in alpha]
+        return a
 
     @staticmethod
     def plot_likelihoods(likelihoods):
